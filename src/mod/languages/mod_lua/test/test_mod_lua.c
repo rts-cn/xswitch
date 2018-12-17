@@ -124,6 +124,78 @@ FST_CORE_BEGIN("conf")
 		}
 		FST_TEST_END()
 
+
+		FST_TEST_BEGIN(curl_test)
+		{
+			switch_stream_handle_t stream = { 0 };
+
+			SWITCH_STANDARD_STREAM(stream);
+
+			switch_api_execute("lua", "test_curl.lua", NULL, &stream);
+
+			if (stream.data) {
+				switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "LUA DATA: %s\n", stream.data);
+				fst_check(strstr(stream.data, "+OK") == stream.data);
+				free(stream.data);
+			}
+		}
+		FST_TEST_END()
+
+		FST_SESSION_BEGIN(curl_async)
+		{
+			switch_core_session_execute_application(fst_session, "lua", "test_async.lua");
+		}
+		FST_SESSION_END()
+
+
+		FST_TEST_BEGIN(curl_download_test)
+		{
+			switch_stream_handle_t stream = { 0 };
+
+			SWITCH_STANDARD_STREAM(stream);
+
+			switch_api_execute("lua", "test_curl_download.lua", NULL, &stream);
+
+			if (stream.data) {
+				switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "LUA DATA: %s\n", stream.data);
+				fst_check(strstr(stream.data, "+OK") == stream.data);
+				free(stream.data);
+			}
+		}
+		FST_TEST_END()
+
+		FST_TEST_BEGIN(curl_example_test)
+		{
+			switch_stream_handle_t stream = { 0 };
+
+			SWITCH_STANDARD_STREAM(stream);
+
+			switch_api_execute("lua", "test_curl_example.lua", NULL, &stream);
+
+			if (stream.data) {
+				switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "LUA DATA: %s\n", stream.data);
+				fst_check(strstr(stream.data, "+OK") == stream.data);
+				free(stream.data);
+			}
+		}
+		FST_TEST_END()
+
+		FST_TEST_BEGIN(curl_upload_test)
+		{
+			switch_stream_handle_t stream = { 0 };
+
+			SWITCH_STANDARD_STREAM(stream);
+
+			switch_api_execute("lua", "test_curl_upload.lua", NULL, &stream);
+
+			if (stream.data) {
+				switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "LUA DATA: %s\n", stream.data);
+				fst_check(strstr(stream.data, "+OK") == stream.data);
+				free(stream.data);
+			}
+		}
+		FST_TEST_END()
+
 		FST_TEARDOWN_BEGIN()
 		{
 		}

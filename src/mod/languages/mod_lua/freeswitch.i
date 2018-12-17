@@ -25,6 +25,13 @@
 #include "freeswitch_lua.h"
 %}
 
+%typemap(typecheck) SWIGLUA_TABLE {
+  $1 = lua_istable(L, $input);
+}
+
+%typemap(typecheck) SWIGLUA_FN {
+  $1 = lua_isfunction(L, $input);
+}
 
 %typemap(in, checkfn="lua_istable") SWIGLUA_TABLE {
   $1.L = L;
@@ -54,6 +61,8 @@
   SWIGLUA_FN default_swiglua_fn = { 0 };
   $1 = default_swiglua_fn;
 }
+
+%include curl.i
 
 %ignore SwitchToMempool;   
 %newobject EventConsumer::pop;

@@ -28,5 +28,4 @@ void mod_lua_conjure_session(lua_State * L, switch_core_session_t *session, cons
 }
 
 
-
 SWITCH_END_EXTERN_C
