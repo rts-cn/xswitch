@@ -23,6 +23,7 @@
 #include "switch.h"
 #include "switch_cpp.h"
 #include "freeswitch_lua.h"
+#include "mod_lua_utils.h"
 %}
 
 %typemap(typecheck) SWIGLUA_TABLE {
@@ -63,6 +64,7 @@
 }
 
 %include curl.i
+%include utils.i
 
 %ignore SwitchToMempool;   
 %newobject EventConsumer::pop;

@@ -11,7 +11,7 @@ libluamod_la_CXXFLAGS = $(AM_CPPFLAGS) $(LUA_CFLAGS) $(CPPFLAGS)
 libluamod_la_CFLAGS = $(AM_CPPFLAGS) $(LUA_CFLAGS) $(CPPFLAGS)
 
 mod_LTLIBRARIES = mod_lua.la
-mod_lua_la_SOURCES = mod_lua.cpp freeswitch_lua.cpp mod_lua_wrap.cpp
+mod_lua_la_SOURCES = mod_lua.cpp freeswitch_lua.cpp mod_lua_wrap.cpp mod_lua_utils.cpp
 
 mod_lua_la_CXXFLAGS = $(AM_CPPFLAGS) $(LUA_CFLAGS) $(CPPFLAGS) $(CURL_CFLAGS)
 mod_lua_la_CFLAGS   = $(AM_CPPFLAGS) $(LUA_CFLAGS) $(CPPFLAGS) $(CURL_CFLAGS)
