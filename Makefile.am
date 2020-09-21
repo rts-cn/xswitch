@@ -297,6 +297,7 @@ library_include_HEADERS = \
 	src/include/switch_msrp.h \
 	src/include/switch_vpx.h \
 	src/include/switch_vad.h \
+	src/include/xswitch.h \
 	libs/libteletone/src/libteletone_detect.h \
 	libs/libteletone/src/libteletone_generate.h \
 	libs/libteletone/src/libteletone.h \
@@ -382,6 +383,7 @@ libfreeswitch_la_SOURCES = \
 	src/switch_msrp.c \
 	src/switch_vad.c \
 	src/switch_vpx.c \
+	src/xswitch.c \
 	libs/libteletone/src/libteletone_detect.c \
 	libs/libteletone/src/libteletone_generate.c \
 	libs/miniupnpc/miniwget.c \
