@@ -445,6 +445,7 @@ static const char usage[] =
 	"\t-vg                    -- run under valgrind\n"
 	"\t-nosql                 -- disable internal sql scoreboard\n"
 	"\t-heavy-timer           -- Heavy Timer, possibly more accurate but at a cost\n"
+	"\t-nat                   -- enable auto nat detection\n"
 	"\t-nonat                 -- disable auto nat detection\n"
 	"\t-nonatmap              -- disable auto nat port mapping\n"
 	"\t-nocal                 -- disable clock calibration\n"
@@ -545,6 +546,9 @@ int main(int argc, char *argv[])
 	if (local_argv[0] && strstr(local_argv[0], "freeswitchd")) {
 		nc = SWITCH_TRUE;
 	}
+
+	// disable auto nat, use -nat to enable it
+	flags &= ~SCF_USE_AUTO_NAT;
 
 	for (x = 1; x < local_argc; x++) {
 
@@ -734,6 +738,10 @@ int main(int argc, char *argv[])
 
 		else if (!strcmp(local_argv[x], "-nonat")) {
 			flags &= ~SCF_USE_AUTO_NAT;
+		}
+
+		else if (!strcmp(local_argv[x], "-nat")) {
+			flags |= SCF_USE_AUTO_NAT;
 		}
 
 		else if (!strcmp(local_argv[x], "-nonatmap")) {
