@@ -1253,13 +1253,17 @@ switch_status_t conference_member_del(conference_obj_t *conference, conference_m
 	}
 
 	for (imember = conference->members; imember; imember = imember->next) {
+		if (imember->watching_member_id == member->id) {
+			imember->watching_member_id = -1;
+		}
+
 		if (imember == member) {
 			if (last) {
 				last->next = imember->next;
 			} else {
 				conference->members = imember->next;
 			}
-			break;
+			// break;
 		}
 		last = imember;
 	}

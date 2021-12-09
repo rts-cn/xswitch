@@ -54,6 +54,7 @@ api_command_t conference_api_sub_commands[] = {
 	{"agc", (void_fn_t) & conference_api_sub_agc, CONF_API_SUB_MEMBER_TARGET, "agc", "<member_id|all|last|non_moderator> [<newval>]"},
 	{"vid-canvas", (void_fn_t) & conference_api_sub_canvas, CONF_API_SUB_MEMBER_TARGET, "vid-canvas", "<member_id|all|last|non_moderator> [<newval>]"},
 	{"vid-watching-canvas", (void_fn_t) & conference_api_sub_watching_canvas, CONF_API_SUB_MEMBER_TARGET, "vid-watching-canvas", "<member_id|all|last|non_moderator> [<newval>]"},
+	{"vid-watching-member", (void_fn_t) & conference_api_sub_watching_member, CONF_API_SUB_MEMBER_TARGET, "vid-watching-member", "<member_id|all|last|non_moderator> <member_id|last|floor|floor-follow>"},
 	{"vid-layer", (void_fn_t) & conference_api_sub_layer, CONF_API_SUB_MEMBER_TARGET, "vid-layer", "<member_id|all|last|non_moderator> [<newval>]"},
 	{"volume_in", (void_fn_t) & conference_api_sub_volume_in, CONF_API_SUB_MEMBER_TARGET, "volume_in", "<member_id|all|last|non_moderator> [<newval>]"},
 	{"volume_out", (void_fn_t) & conference_api_sub_volume_out, CONF_API_SUB_MEMBER_TARGET, "volume_out", "<member_id|all|last|non_moderator> [<newval>]"},
@@ -1082,6 +1083,46 @@ switch_status_t conference_api_sub_watching_canvas(conference_member_t *member, 
 	stream->write_function(stream, "+OK watching canvas %d\n", index + 1);
 
 	conference_member_update_status_field(member);
+
+	return SWITCH_STATUS_SUCCESS;
+}
+
+switch_status_t conference_api_sub_watching_member(conference_member_t *member, switch_stream_handle_t *stream, void *data)
+{
+	int member_id;
+	char *val = (char *) data;
+
+	if (!val) {
+		stream->write_function(stream, "-ERR Invalid DATA\n");
+		return SWITCH_STATUS_SUCCESS;
+	}
+
+	member->watching_floor_follow = SWITCH_FALSE;
+
+	if (!strcasecmp(val, "floor")) {
+		if (member->conference->video_floor_holder > 0) {
+			member_id = member->conference->video_floor_holder;
+		} else {
+			member_id = member->conference->floor_holder;
+		}
+	} else if (!strcasecmp(val, "floor-follow")) {
+		if (member->conference->video_floor_holder > 0) {
+			member_id = member->conference->video_floor_holder;
+		} else {
+			member_id = member->conference->floor_holder;
+		}
+		member->watching_floor_follow = SWITCH_TRUE;
+	} else {
+		member_id = atoi(val);
+	}
+
+	if (member_id == 0) {
+		member_id = -1;
+		switch_channel_set_flag(member->channel, CF_VIDEO_REFRESH_REQ);
+	}
+
+	member->watching_member_id = member_id;
+	stream->write_function(stream, "+OK watching member %d\n", member_id);
 
 	return SWITCH_STATUS_SUCCESS;
 }
