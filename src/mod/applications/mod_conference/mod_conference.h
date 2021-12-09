@@ -865,6 +865,8 @@ struct conference_member {
 	int video_layer_id;
 	int canvas_id;
 	int watching_canvas_id;
+	int watching_member_id;
+	switch_bool_t watching_floor_follow;
 	int layer_timeout;
 	int video_codec_index;
 	int video_codec_id;
@@ -1255,6 +1257,7 @@ switch_status_t conference_api_sub_auto_energy(conference_member_t *member, swit
 switch_status_t conference_api_sub_agc(conference_member_t *member, switch_stream_handle_t *stream, void *data);
 switch_status_t conference_api_sub_max_energy(conference_member_t *member, switch_stream_handle_t *stream, void *data);
 switch_status_t conference_api_sub_watching_canvas(conference_member_t *member, switch_stream_handle_t *stream, void *data);
+switch_status_t conference_api_sub_watching_member(conference_member_t *member, switch_stream_handle_t *stream, void *data);
 switch_status_t conference_api_sub_canvas(conference_member_t *member, switch_stream_handle_t *stream, void *data);
 switch_status_t conference_api_sub_layer(conference_member_t *member, switch_stream_handle_t *stream, void *data);
 switch_status_t conference_api_sub_kick(conference_member_t *member, switch_stream_handle_t *stream, void *data);

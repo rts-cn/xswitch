@@ -1943,7 +1943,9 @@ void conference_video_write_canvas_image_to_codec_group(conference_obj_t *confer
 				}
 
 				conference_utils_member_clear_flag(imember, MFLAG_VIDEO_JOIN);
-				
+
+				if (imember->watching_member_id > 0) continue;
+
 				if (!imember->session || !switch_channel_test_flag(imember->channel, CF_VIDEO_READY) ||
 					switch_core_session_read_lock(imember->session) != SWITCH_STATUS_SUCCESS) {
 					continue;
@@ -3487,6 +3489,42 @@ void *SWITCH_THREAD_FUNC conference_video_muxing_thread_run(switch_thread_t *thr
 			conference_video_pop_next_image(imember, &img);
 			layer = NULL;
 
+			if (img) {
+				conference_member_t *m;
+				uint8_t *packet = NULL;
+				switch_frame_t *dupframe;
+
+				for (m = conference->members; m; m = m->next) {
+					if (m->watching_member_id == imember->id) {
+						if (!packet) {
+							packet = malloc(SWITCH_RTP_MAX_BUF_LEN);
+							switch_assert(packet);
+						}
+
+						switch_set_flag(&write_frame, SFF_RAW_RTP);
+						write_frame.img = img;
+						write_frame.packet = packet;
+						write_frame.data = ((uint8_t *)packet) + 12;
+						write_frame.datalen = 0;
+						write_frame.buflen = SWITCH_RTP_MAX_BUF_LEN - 12;
+						write_frame.packetlen = 0;
+
+						// switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "sending from %d  to %d %dx%d\n", imember->id, m->id, img->d_w, img->d_h);
+
+						// switch_core_session_write_video_frame(m->session, &write_frame, SWITCH_IO_FLAG_NONE, 0);
+
+						if (switch_frame_buffer_dup(m->fb, &write_frame, &dupframe) == SWITCH_STATUS_SUCCESS) {
+							if (switch_frame_buffer_trypush(m->fb, dupframe) != SWITCH_STATUS_SUCCESS) {
+								switch_frame_buffer_free(m->fb, &dupframe);
+							}
+						}
+						dupframe = NULL;
+					}
+				}
+
+				switch_safe_free(packet);
+			}
+
 			switch_mutex_lock(canvas->mutex);
 
 			
@@ -4407,6 +4445,12 @@ void *SWITCH_THREAD_FUNC conference_video_super_muxing_thread_run(switch_thread_
 				!conference_utils_member_test_flag(imember, MFLAG_NO_MINIMIZE_ENCODING)) {
 				min_members++;
 
+				if (imember->watching_member_id < 0) {
+					imember->watching_member_id = 0;
+					send_keyframe = SWITCH_TRUE;
+					switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "sending a key frame\n");
+				}
+
 				if (switch_channel_test_flag(imember->channel, CF_VIDEO_READY)) {
 					if (imember->video_codec_index < 0 && (check_codec = switch_core_session_get_video_write_codec(imember->session))) {
 						for (i = 0; canvas->write_codecs[i] && switch_core_codec_ready(&canvas->write_codecs[i]->codec) && i < MAX_MUX_CODECS; i++) {
@@ -4800,6 +4844,10 @@ void conference_video_set_floor_holder(conference_obj_t *conference, conference_
 
 	switch_mutex_lock(conference->member_mutex);
 	for (imember = conference->members; imember; imember = imember->next) {
+		if (imember->watching_floor_follow) {
+			imember->watching_member_id = conference->video_floor_holder;
+		}
+
 		if (!imember->channel || !switch_channel_test_flag(imember->channel, CF_VIDEO_READY)) {
 			continue;
 		}
