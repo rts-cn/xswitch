@@ -4314,6 +4314,10 @@ static switch_status_t check_ice(switch_media_handle_t *smh, switch_media_type_t
 
  done_choosing:
 
+	if (switch_channel_test_flag(smh->session->channel, CF_AUDIO_VIDEO_BUNDLE)) {
+		engine->ice_in.is_chosen[0] = 1;
+	}
+
 	if (!engine->ice_in.is_chosen[0]) {
 		if (!relay_ok) {
 			switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(smh->session), SWITCH_LOG_DEBUG, "Look for Relay Candidates as last resort\n");

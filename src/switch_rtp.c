@@ -5653,6 +5653,129 @@ static int get_recv_payload(switch_rtp_t *rtp_session)
 
 #define return_cng_frame() do_cng = 1; goto timer_check
 
+static switch_status_t read_bundle_rtp_packet(switch_rtp_t *rtp_session, switch_size_t *bytes, switch_frame_flag_t *flags)
+{
+	switch_status_t status = SWITCH_STATUS_FALSE;
+	switch_rtp_t *rtp_bundle_session = switch_core_media_get_rtp_session(rtp_session->session, SWITCH_MEDIA_TYPE_AUDIO);
+
+	if (!rtp_session) {
+		return SWITCH_STATUS_GENERR;
+	}
+
+	if (*bytes && rtp_bundle_session->flags[SWITCH_RTP_FLAG_DEBUG_RTP_READ]) {
+		const char *tx_host;
+		const char *old_host;
+		const char *my_host;
+
+		char bufa[50], bufb[50], bufc[50];
+
+
+		tx_host = switch_get_addr(bufa, sizeof(bufa), rtp_session->rtp_from_addr);
+		old_host = switch_get_addr(bufb, sizeof(bufb), rtp_session->remote_addr);
+		my_host = switch_get_addr(bufc, sizeof(bufc), rtp_session->local_addr);
+
+		switch_log_printf(SWITCH_CHANNEL_SESSION_LOG_CLEAN(rtp_session->session), SWITCH_LOG_CONSOLE,
+						  "R %s b=%4ld %s:%u %s:%u %s:%u pt=%d ts=%u seq=%u m=%d\n",
+						  rtp_session->session ? switch_channel_get_name(switch_core_session_get_channel(rtp_session->session)) : "No-Name",
+						  (long) *bytes,
+						  my_host, switch_sockaddr_get_port(rtp_session->local_addr),
+						  old_host, rtp_session->remote_port,
+						  tx_host, switch_sockaddr_get_port(rtp_session->rtp_from_addr),
+						  rtp_session->last_rtp_hdr.pt, ntohl(rtp_session->last_rtp_hdr.ts), ntohs(rtp_session->last_rtp_hdr.seq),
+						  rtp_session->last_rtp_hdr.m);
+	}
+
+	if (!rtp_session->flags[SWITCH_RTP_FLAG_PROXY_MEDIA] && !rtp_session->flags[SWITCH_RTP_FLAG_UDPTL]) {
+#ifdef ENABLE_SRTP
+		switch_mutex_lock(rtp_session->ice_mutex);
+		if (rtp_session->flags[SWITCH_RTP_FLAG_SECURE_RECV] && rtp_session->has_rtp) {
+			//if (rtp_session->flags[SWITCH_RTP_FLAG_SECURE_RECV] && (!rtp_session->ice.ice_user || rtp_session->has_rtp)) {
+			int sbytes = (int) *bytes;
+			srtp_err_status_t stat = 0;
+
+			if (rtp_session->flags[SWITCH_RTP_FLAG_SECURE_RECV_RESET] || !rtp_session->recv_ctx[rtp_session->srtp_idx_rtp]) {
+				switch_rtp_clear_flag(rtp_session, SWITCH_RTP_FLAG_SECURE_RECV_RESET);
+				srtp_dealloc(rtp_session->recv_ctx[rtp_session->srtp_idx_rtp]);
+				rtp_session->recv_ctx[rtp_session->srtp_idx_rtp] = NULL;
+				if ((stat = srtp_create(&rtp_session->recv_ctx[rtp_session->srtp_idx_rtp],
+										&rtp_session->recv_policy[rtp_session->srtp_idx_rtp])) || !rtp_session->recv_ctx[rtp_session->srtp_idx_rtp]) {
+
+					rtp_session->flags[SWITCH_RTP_FLAG_SECURE_RECV] = 0;
+					switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(rtp_session->session), SWITCH_LOG_ERROR, "Error! RE-Activating Secure RTP RECV\n");
+					rtp_session->flags[SWITCH_RTP_FLAG_SECURE_RECV] = 0;
+					switch_mutex_unlock(rtp_session->ice_mutex);
+					return SWITCH_STATUS_FALSE;
+				} else {
+
+					switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(rtp_session->session), SWITCH_LOG_INFO, "RE-Activating Secure RTP RECV\n");
+					rtp_session->srtp_errs[rtp_session->srtp_idx_rtp] = 0;
+				}
+			}
+
+			if (!(*flags & SFF_PLC) && rtp_session->recv_ctx[rtp_session->srtp_idx_rtp]) {
+				if (!rtp_session->flags[SWITCH_RTP_FLAG_SECURE_RECV_MKI]) {
+					stat = srtp_unprotect(rtp_session->recv_ctx[rtp_session->srtp_idx_rtp], &rtp_session->recv_msg.header, &sbytes);
+				} else {
+					stat = srtp_unprotect_mki(rtp_session->recv_ctx[rtp_session->srtp_idx_rtp], &rtp_session->recv_msg.header, &sbytes, 1);
+				}
+
+				// if (rtp_session->flags[SWITCH_RTP_FLAG_NACK] && stat == srtp_err_status_replay_fail) {
+				// 	/* false alarm nack */
+				// 	switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(rtp_session->session), SWITCH_LOG_DEBUG1, "REPLAY ERR, FALSE NACK\n");
+				// 	sbytes = 0;
+				// 	*bytes = 0;
+				// 	if (rtp_session->stats.rtcp.pkt_count) {
+				// 		rtp_session->stats.rtcp.period_pkt_count--;
+				// 		rtp_session->stats.rtcp.pkt_count--;
+				// 	}
+				// 	switch_mutex_unlock(rtp_session->ice_mutex);
+				// 	goto more;
+				// }
+			}
+
+			if (stat && rtp_session->recv_msg.header.pt != rtp_session->recv_te && rtp_session->recv_msg.header.pt != rtp_session->cng_pt) {
+				int errs = ++rtp_session->srtp_errs[rtp_session->srtp_idx_rtp];
+				if (rtp_session->flags[SWITCH_RTP_FLAG_SRTP_HANGUP_ON_ERROR] && stat != srtp_err_status_replay_old) {
+					char *msg;
+					switch_srtp_err_to_txt(stat, &msg);
+					if (errs >= MAX_SRTP_ERRS) {
+						switch_channel_t *channel = switch_core_session_get_channel(rtp_session->session);
+						switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(rtp_session->session), SWITCH_LOG_WARNING,
+											"SRTP %s unprotect failed with code %d (%s) %ld bytes %d errors\n",
+											rtp_type(rtp_session), stat, msg, (long)*bytes, errs);
+						switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(rtp_session->session), SWITCH_LOG_WARNING,
+											"Ending call due to SRTP error\n");
+						switch_channel_hangup(channel, SWITCH_CAUSE_SRTP_READ_ERROR);
+					} else if (errs >= WARN_SRTP_ERRS && !(errs % WARN_SRTP_ERRS)) {
+						switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(rtp_session->session), SWITCH_LOG_WARNING,
+											"SRTP %s unprotect failed with code %d (%s) %ld bytes %d errors\n",
+											rtp_type(rtp_session), stat, msg, (long)*bytes, errs);
+					}
+				}
+				sbytes = 0;
+			} else {
+				rtp_session->srtp_errs[rtp_session->srtp_idx_rtp] = 0;
+			}
+
+			*bytes = sbytes;
+		}
+		switch_mutex_unlock(rtp_session->ice_mutex);
+#endif
+	}
+
+	if (!jb_valid(rtp_bundle_session)) {
+		dtls_set_state(rtp_bundle_session->dtls, DS_READY);
+	}
+
+	if (rtp_bundle_session->jb && !rtp_bundle_session->pause_jb && jb_valid(rtp_bundle_session)) {
+		status = switch_jb_put_packet(rtp_bundle_session->jb, (switch_rtp_packet_t *) &rtp_session->recv_msg, *bytes);
+	}
+
+	*bytes = 0;
+
+	return status;
+}
+
 static switch_status_t read_rtp_packet(switch_rtp_t *rtp_session, switch_size_t *bytes, switch_frame_flag_t *flags,
 									   payload_map_t **pmapP, switch_status_t poll_status, switch_bool_t return_jb_packet)
 {
@@ -5664,6 +5787,8 @@ static switch_status_t read_rtp_packet(switch_rtp_t *rtp_session, switch_size_t 
 	switch_size_t xcheck_jitter = 0;
 	int tries = 0;
 	int block = 0;
+	uint8_t audio_pt = 0;
+	switch_channel_t *channel = switch_core_session_get_channel(rtp_session->session);
 
 	switch_assert(bytes);
  more:
@@ -5810,6 +5935,15 @@ static switch_status_t read_rtp_packet(switch_rtp_t *rtp_session, switch_size_t 
 						}
 					}
 					switch_mutex_unlock(rtp_session->flag_mutex);
+				}
+
+				if (switch_channel_test_flag(channel, CF_AUDIO_VIDEO_BUNDLE) && rtp_session->flags[SWITCH_RTP_FLAG_VIDEO]) {
+					audio_pt = switch_core_session_get_rtp_pt(rtp_session->session, SWITCH_MEDIA_TYPE_AUDIO);
+					if (rtp_session->last_rtp_hdr.pt == audio_pt) {
+						accept_packet = 1;
+
+						return read_bundle_rtp_packet(rtp_session, bytes, flags);
+					}
 				}
 
 				if (!accept_packet) {
@@ -7441,6 +7575,8 @@ static int rtp_common_read(switch_rtp_t *rtp_session, switch_payload_t *payload_
 		}
 
 		/* ignore packets not meant for us unless the auto-adjust window is open (ice mode has its own alternatives to this) */
+		/* ------------------- BUNDLE audio skip pt and addr check begin ------------------- */
+		if (!switch_channel_test_flag(channel, CF_AUDIO_VIDEO_BUNDLE) || (switch_channel_test_flag(channel, CF_AUDIO_VIDEO_BUNDLE) && rtp_session->flags[SWITCH_RTP_FLAG_VIDEO])) {
 		if (!using_ice(rtp_session) && bytes) {
 			if (rtp_session->flags[SWITCH_RTP_FLAG_AUTOADJ]) {
 				if (rtp_session->last_rtp_hdr.pt == rtp_session->cng_pt || rtp_session->last_rtp_hdr.pt == 13) {
@@ -7517,6 +7653,7 @@ static int rtp_common_read(switch_rtp_t *rtp_session, switch_payload_t *payload_
 				switch_rtp_clear_flag(rtp_session, SWITCH_RTP_FLAG_AUTOADJ);
 			}
 		}
+		} /* ------------------- BUNDLE audio skip pt and addr check end ------------------- */
 
 		if (rtp_session->flags[SWITCH_RTP_FLAG_TEXT]) {
 			if (!bytes) {
