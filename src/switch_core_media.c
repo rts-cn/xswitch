@@ -8410,6 +8410,18 @@ static void gen_ice(switch_core_session_t *session, switch_media_type_t type, co
 		smh->cname = switch_core_session_strdup(session, tmp);
 	}
 
+	if (type == SWITCH_MEDIA_TYPE_VIDEO && switch_channel_var_true(switch_core_session_get_channel(session), "video_use_audio_ice")) {
+		switch_rtp_engine_t *audio_engine = &smh->engines[SWITCH_MEDIA_TYPE_AUDIO];
+
+		if (audio_engine->ice_out.ufrag) {
+			engine->ice_out.ufrag = switch_core_session_strdup(session, audio_engine->ice_out.ufrag);
+		}
+
+		if (audio_engine->ice_out.pwd) {
+			engine->ice_out.pwd = switch_core_session_strdup(session, audio_engine->ice_out.pwd);
+		}
+	}
+
 	if (!engine->ice_out.ufrag) {
 		switch_stun_random_string(tmp, 16, NULL);
 		tmp[16] = '\0';
