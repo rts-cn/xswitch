@@ -3213,6 +3213,10 @@ static int do_dtls(switch_rtp_t *rtp_session, switch_dtls_t *dtls)
 	int ready = rtp_session->ice.ice_user ? (rtp_session->ice.rready && rtp_session->ice.ready) : 1;
 	int pending;
 
+	if (switch_channel_test_flag(switch_core_session_get_channel(rtp_session->session), CF_AUDIO_VIDEO_BUNDLE)) {
+		if (rtp_session->ice.ice_user && rtp_session->ice.rready == 1) ready = 1;
+	}
+
 	if (!dtls->bytes && !ready) {
 		return 0;
 	}
@@ -8105,12 +8109,19 @@ static int rtp_common_write(switch_rtp_t *rtp_session,
 	int ret;
 	switch_time_t now;
 	uint8_t m = 0;
+	switch_rtp_t *rtp_bundle_session = NULL;
+	switch_rtp_t *tmp_session = NULL;
 
 	if (!switch_rtp_ready(rtp_session)) {
 		return -1;
 	}
 
-	if (!rtp_write_ready(rtp_session, datalen, __LINE__)) {
+	if (!switch_rtp_test_flag(rtp_session, SWITCH_RTP_FLAG_VIDEO) &&
+		switch_channel_test_flag(switch_core_session_get_channel(rtp_session->session), CF_AUDIO_VIDEO_BUNDLE)) {
+		rtp_bundle_session = switch_core_media_get_rtp_session(rtp_session->session, SWITCH_MEDIA_TYPE_VIDEO);
+	}
+
+	if (!rtp_bundle_session && !rtp_write_ready(rtp_session, datalen, __LINE__)) {
 		return 0;
 	}
 
@@ -8440,6 +8451,11 @@ static int rtp_common_write(switch_rtp_t *rtp_session,
 			switch_swap_linear((int16_t *)send_msg->body, (int) datalen);
 		}
 
+		if (rtp_bundle_session) {
+			tmp_session = rtp_session;
+			rtp_session = rtp_bundle_session;
+		}
+
 #ifdef ENABLE_SRTP
 		switch_mutex_lock(rtp_session->ice_mutex);
 		if (rtp_session->flags[SWITCH_RTP_FLAG_SECURE_SEND]) {
@@ -8568,6 +8584,8 @@ static int rtp_common_write(switch_rtp_t *rtp_session,
 			goto end;
 		}
 #endif
+		if (rtp_bundle_session) rtp_session = tmp_session;
+
 		rtp_session->last_write_ts = this_ts;
 		rtp_session->flags[SWITCH_RTP_FLAG_RESET] = 0;
 
@@ -8695,7 +8713,7 @@ SWITCH_DECLARE(int) switch_rtp_write_frame(switch_rtp_t *rtp_session, switch_fra
 	}
 
 	if (!rtp_write_ready(rtp_session, frame->datalen, __LINE__)) {
-		return 0;
+		if (!switch_channel_test_flag(switch_core_session_get_channel(rtp_session->session), CF_AUDIO_VIDEO_BUNDLE)) return 0;
 	}
 
 	//if (rtp_session->flags[SWITCH_RTP_FLAG_VIDEO]) {
