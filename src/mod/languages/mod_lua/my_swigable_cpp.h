@@ -26,8 +26,8 @@ class Stream {
 %inline %{
 	char *read(int *len);
 %}
-	void write(const char *data);
-	void raw_write(void *data, int len);
+	unsigned int write(const char *data);
+	unsigned int raw_write(void *data, int len);
 	const char *get_data(void);
 };
 

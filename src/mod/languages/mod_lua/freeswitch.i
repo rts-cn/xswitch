@@ -35,6 +35,10 @@
   $1 = lua_istable(L, $input);
 }
 
+%typemap(out) switch_status_t {
+  SWIG_arg += int(result);
+}
+
 %typemap(out) cJSON * {
   SWIG_arg += LUA::JSON::cJSON2LuaTable(L, result);
   cJSON_Delete(result);
@@ -66,6 +70,7 @@
 
 %include "typemaps.i"
 %apply int *OUTPUT { int *len };
+%apply unsigned int { switch_status_t }
 
 %typemap(out) DbhQueryRowsReturn {
     SWIG_arg += result;
