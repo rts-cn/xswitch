@@ -69,7 +69,7 @@
 %newobject JSON::decode;
 
 %include "typemaps.i"
-%apply int *OUTPUT { int *len };
+%apply int *INPUT { int *len };
 %apply unsigned int { switch_status_t }
 
 %typemap(out) DbhQueryRowsReturn {

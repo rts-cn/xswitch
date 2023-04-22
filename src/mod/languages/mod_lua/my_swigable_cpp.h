@@ -23,9 +23,7 @@ class Stream {
 	     Stream(switch_stream_handle_t *);
 	                       virtual ~ Stream();
 
-%inline %{
-	char *read(int *len);
-%}
+	const char *read(int *len);
 	unsigned int write(const char *data);
 	unsigned int raw_write(void *data, int len);
 	const char *get_data(void);
