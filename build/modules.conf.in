@@ -11,10 +11,10 @@ applications/mod_conference
 #applications/mod_cv
 applications/mod_db
 #applications/mod_directory
-#applications/mod_distributor
+applications/mod_distributor
 applications/mod_dptools
 #applications/mod_easyroute
-applications/mod_enum
+#applications/mod_enum
 applications/mod_esf
 #applications/mod_esl
 applications/mod_expr
@@ -32,7 +32,7 @@ applications/mod_httapi
 #applications/mod_osp
 #applications/mod_prefix
 #applications/mod_redis
-applications/mod_signalwire
+#applications/mod_signalwire
 applications/mod_sms
 #applications/mod_snapshot
 applications/mod_spandsp
@@ -49,7 +49,7 @@ applications/mod_voicemail
 #asr_tts/mod_tts_commandline
 codecs/mod_amr
 #codecs/mod_amrwb
-codecs/mod_b64
+#codecs/mod_b64
 #codecs/mod_bv
 #codecs/mod_codec2
 codecs/mod_g723_1
@@ -58,9 +58,9 @@ codecs/mod_g729
 codecs/mod_opus
 #codecs/mod_silk
 #codecs/mod_siren
-#databases/mod_mariadb
+databases/mod_mariadb
 databases/mod_pgsql
-dialplans/mod_dialplan_asterisk
+#dialplans/mod_dialplan_asterisk
 #dialplans/mod_dialplan_directory
 dialplans/mod_dialplan_xml
 #directories/mod_ldap
@@ -70,7 +70,7 @@ endpoints/mod_loopback
 #endpoints/mod_opal
 endpoints/mod_rtc
 #endpoints/mod_rtmp
-endpoints/mod_skinny
+#endpoints/mod_skinny
 endpoints/mod_sofia
 endpoints/mod_verto
 #event_handlers/mod_amqp
@@ -124,14 +124,14 @@ say/mod_say_en
 #say/mod_say_ru
 #say/mod_say_sv
 #say/mod_say_th
-#say/mod_say_zh
+say/mod_say_zh
 #timers/mod_posix_timer
 #timers/mod_timerfd
 xml_int/mod_xml_cdr
 #xml_int/mod_xml_curl
 #xml_int/mod_xml_ldap
-xml_int/mod_xml_rpc
-xml_int/mod_xml_scgi
+#xml_int/mod_xml_rpc
+#xml_int/mod_xml_scgi
 
 #mod_freetdm|https://github.com/freeswitch/freetdm.git -b master
 
