@@ -3378,7 +3378,20 @@ static int do_dtls(switch_rtp_t *rtp_session, switch_dtls_t *dtls)
 		return 0;
 	}
 
-	if (is_ice && !rtp_session->ice.cand_responsive) {
+	if (is_ice && !(rtp_session->ice.type & ICE_LITE) && !rtp_session->ice.cand_responsive) {
+		switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(rtp_session->session), SWITCH_LOG_DEBUG6, "Got DTLS packet but candidate is not responsive\n");
+
+		return 0;
+	}
+
+	if (is_ice && !switch_cmp_addr(rtp_session->from_addr, rtp_session->ice.addr, SWITCH_TRUE)) {
+		char tmp_buf1[80] = "";
+		char tmp_buf2[80] = "";
+		const char *host_from = switch_get_addr(tmp_buf1, sizeof(tmp_buf1), rtp_session->from_addr);
+		const char *host_ice_cur_addr = switch_get_addr(tmp_buf2, sizeof(tmp_buf2), rtp_session->ice.addr);
+
+		switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(rtp_session->session), SWITCH_LOG_DEBUG5, "Got DTLS packet from [%s] whilst current ICE negotiated address is [%s]. Ignored.\n", host_from, host_ice_cur_addr);
+
 		return 0;
 	}
 
@@ -4223,6 +4236,20 @@ SWITCH_DECLARE(switch_status_t) switch_rtp_add_crypto_key(switch_rtp_t *rtp_sess
 			switch_channel_set_variable(channel, "rtp_has_crypto", "AES_CM_256_HMAC_SHA1_32");
 		}
 		break;
+	case AES_CM_192_HMAC_SHA1_80:
+		srtp_crypto_policy_set_aes_cm_192_hmac_sha1_80(&policy->rtp);
+		srtp_crypto_policy_set_aes_cm_192_hmac_sha1_80(&policy->rtcp);
+		if (switch_channel_direction(channel) == SWITCH_CALL_DIRECTION_OUTBOUND) {
+			switch_channel_set_variable(channel, "rtp_has_crypto", "AES_CM_192_HMAC_SHA1_80");
+		}
+		break;
+	case AES_CM_192_HMAC_SHA1_32:
+		srtp_crypto_policy_set_aes_cm_192_hmac_sha1_32(&policy->rtp);
+		srtp_crypto_policy_set_aes_cm_192_hmac_sha1_32(&policy->rtcp);
+		if (switch_channel_direction(channel) == SWITCH_CALL_DIRECTION_OUTBOUND) {
+			switch_channel_set_variable(channel, "rtp_has_crypto", "AES_CM_192_HMAC_SHA1_32");
+		}
+		break;
 	case AES_CM_128_NULL_AUTH:
 		srtp_crypto_policy_set_aes_cm_128_null_auth(&policy->rtp);
 		srtp_crypto_policy_set_aes_cm_128_null_auth(&policy->rtcp);
@@ -4232,6 +4259,7 @@ SWITCH_DECLARE(switch_status_t) switch_rtp_add_crypto_key(switch_rtp_t *rtp_sess
 		}
 		break;
 	default:
+		switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(rtp_session->session), SWITCH_LOG_ERROR, "Missing crypto type!\n");
 		break;
 	}
 
