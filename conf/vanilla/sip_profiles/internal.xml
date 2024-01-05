@@ -296,8 +296,8 @@
          auto                  - Use guessed ip.
          auto-nat              - Use ip learned from NAT-PMP or UPNP
     -->
-    <param name="ext-rtp-ip" value="$${external_rtp_ip}"/>
-    <param name="ext-sip-ip" value="$${external_sip_ip}"/>
+    <!-- <param name="ext-rtp-ip" value="$${external_rtp_ip}"/> -->
+    <!-- <param name="ext-sip-ip" value="$${external_sip_ip}"/> -->
 
     <!-- rtp inactivity timeout -->
     <param name="rtp-timeout-sec" value="300"/>
