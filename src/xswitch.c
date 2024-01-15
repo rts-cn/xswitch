@@ -148,27 +148,27 @@ xswitch_http_request(int method, const char *url, const void *data, size_t datal
 
 SWITCH_DECLARE(void) xswitch_setup_iptables(switch_memory_pool_t *pool)
 {
-    char *node_ip = getenv("K8S_NODE_IP");
-    char *pod_ip = getenv("K8S_POD_IP");
-    char *rtp_start = getenv("RTP_START");
-    char *rtp_end = getenv("RTP_END");
-    char url[1024];
-    char data[1024];
-    http_data_t *response = NULL;
+	char *node_ip = getenv("K8S_NODE_IP");
+	char *pod_ip = getenv("K8S_POD_IP");
+	char *rtp_start = getenv("RTP_START");
+	char *rtp_end = getenv("RTP_END");
+	char url[1024];
+	char data[1024];
+	http_data_t *response = NULL;
 
-    if (!node_ip || !pod_ip || !rtp_start || !rtp_end || !switch_true(switch_core_get_variable("xswitch_setup_iptables"))) {
-        return;
-    }
+	if (!node_ip || !pod_ip || !rtp_start || !rtp_end || !switch_true(switch_core_get_variable("xswitch_setup_iptables"))) {
+		return;
+	}
 
-    switch_snprintf(url, sizeof(url), "http://%s:8082/iptables", node_ip);
-    switch_snprintf(data, sizeof(data), "cip=%s&rtp_start=%s&rtp_end=%s", pod_ip, rtp_start, rtp_end);
+	switch_snprintf(url, sizeof(url), "http://%s:8082/iptables", node_ip);
+	switch_snprintf(data, sizeof(data), "cip=%s&rtp_start=%s&rtp_end=%s", pod_ip, rtp_start, rtp_end);
 
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "POST %s %s\n", url, data);
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "POST %s %s\n", url, data);
 
-    response = xswitch_http_post(url, (const char *)data, pool);
+	response = xswitch_http_post(url, (const char *)data, pool);
 
 	if (response && response->body_buffer) {
-        const char *body = NULL;
+		const char *body = NULL;
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "code: %ld\n", response->code);
 		switch_buffer_peek_zerocopy(response->body_buffer, (const void **)&body);
 		if (response->code == 200) {
