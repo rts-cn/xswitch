@@ -43,7 +43,7 @@
     <load module="mod_verto"/>
 
     <!-- Applications -->
-    <load module="mod_signalwire"/>
+    <!-- <load module="mod_signalwire"/> -->
     <load module="mod_commands"/>
     <load module="mod_conference"/>
     <!-- <load module="mod_curl"/> -->
@@ -86,7 +86,7 @@
     <load module="mod_opus"/>
 
     <!-- File Format Interfaces -->
-    <load module="mod_av"/>
+    <!-- <load module="mod_av"/> -->
     <load module="mod_sndfile"/>
     <load module="mod_native_file"/>
     <!--<load module="mod_opusfile"/>-->
