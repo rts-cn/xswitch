@@ -42,6 +42,11 @@ Thanks Anthony Minessale made this great project, and thanks all who contributed
 
 Open an issue if you have any question.
 
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/chart?repos=rts-cn/xswitch&type=date&legend=top-left)](https://www.star-history.com/?repos=rts-cn%2Fxswitch&type=date&legend=top-left)
+
 ---
 
 以下是原来的README。The Original README Follows.
